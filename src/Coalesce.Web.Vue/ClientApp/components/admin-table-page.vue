@@ -18,11 +18,15 @@
               <v-icon left >cancel</v-icon>
               Cancel
             </v-btn>
-            {{person.$save.isLoading}}
-            <v-btn color="primary"  
+
+            <v-btn @click="funcWithState()">
+              {{funcWithState.a}}
+            </v-btn>
+            {{person.$saveState.isLoading}}
+            <v-btn flat color="primary"  
               @click.native="person.$save()" 
-              :loading="person.$save.isLoading"
-              :disabled="person.$save.isLoading"
+              :loading="person.$saveState.isLoading"
+              :disabled="person.$saveState.isLoading"
             >
               <v-icon left >save</v-icon>
               Save 

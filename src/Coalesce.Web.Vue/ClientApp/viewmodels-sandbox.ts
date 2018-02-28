@@ -30,15 +30,16 @@ abstract class ViewModel<TMeta extends ModelType, TModel extends Model<TMeta>> i
     /**
      * A function for invoking the /get endpoint, and a set of properties about the state of the last call.
      */
-    public $load = this.$apiClient.$caller("item",
+    public $loadState = this.$apiClient.$caller("item",
         c => (id?: string | number) => c.get(id != null ? id : (this as any)[this.$metadata.keyProp.name]))
         // TODO: merge in the result, don't replace the existing one.
-        .onFulfilled(() => { this.$data = this.$load.result || this.$data; this.$isDirty = false; })
-
+        .onFulfilled(() => { this.$data = this.$loadState.result || this.$data; this.$isDirty = false; })
+    public $load = this.$loadState.invoke;
+    
     /**
      * A function for invoking the /save endpoint, and a set of properties about the state of the last call.
      */
-    public $save = this.$apiClient.$caller("item", 
+    public $saveState = this.$apiClient.$caller("item", 
         c => () => {
             // Before we make the save call, set isDirty = false.
             // This lets us detect changes that happen to the model while our save request is pending.
@@ -51,18 +52,20 @@ abstract class ViewModel<TMeta extends ModelType, TModel extends Model<TMeta>> i
                 // Only load the save response if the data hasn't changed since we sent it.
                 // If the data has changed, loading the response would overwrite users' changes.
                 // TODO: merge in the result, don't replace the existing one.
-                this.$data = this.$save.result || this.$data; 
+                this.$data = this.$saveState.result || this.$data; 
 
                 // Set the new state of our data as being clean (since we just made a change to it)
                 this.$isDirty = false;
             }
         })
+    public $save = this.$saveState.invoke;
         
     /**
      * A function for invoking the /delete endpoint, and a set of properties about the state of the last call.
      */
-    public $delete = this.$apiClient.$caller("item",
+    public $deleteState = this.$apiClient.$caller("item",
         c => () => c.delete((this as any)[this.$metadata.keyProp.name]))
+    public $delete = this.$deleteState.invoke;
 
     // Internal autosave state - seal to prevent unnessecary reactivity
     private _autoSaveState = Object.seal<{
@@ -82,12 +85,12 @@ abstract class ViewModel<TMeta extends ModelType, TModel extends Model<TMeta>> i
         this.$stopAutoSave()
 
         const enqueueSave = _.debounce(() => {
-            if (this.$save.isLoading) {
+            if (this.$saveState.isLoading) {
                 // Save already in progress. Enqueue another attempt.
                 enqueueSave();
             } else if (this.$isDirty) {
                 // No saves in progress - go ahead and save now.
-                this.$save()
+                this.$saveState.invoke()
             }
         }, wait)
 

@@ -8,7 +8,6 @@ import * as models from '../models.g';
 
 import { PersonViewModel } from '../viewmodels-sandbox'
 
-
 @Component({
   name: 'admin-table-page',
   components: {
@@ -64,10 +63,20 @@ export default class extends Vue {
         // this.person = new PersonViewModel(list[0]);
       })
   }
-
+  funcWithState: any;
   mounted() {
     //this.getData();
     this.person = new PersonViewModel();
+
+    this.funcWithState = function() {
+      this.funcWithState.a++;
+      //Vue.set(this.funcWithState, 'a', this.funcWithState.a)
+    };
+    (Vue as any).util.defineReactive(this.funcWithState, 'a', 1, null, true);
+    this.funcWithState();
+    this.funcWithState();
+    console.log(this.funcWithState.a)
+
     this.person.$load(1);
     this.person.$startAutoSave(this);
   }
