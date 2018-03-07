@@ -1,0 +1,39 @@
+{
+  "name": "coalesce-vue-vuetify",
+  "version": "2.0.0-alpha-0001",
+  "description": "Coalesce components for Vue.js",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "repository": "https://github.com/IntelliTect/Coalesce",
+  "author": "IntelliTect",
+  "license": "Apache-2.0",
+  "private": false,
+  "dependencies": {},
+  "peerDependencies": {
+    "coalesce-vue": "^2.0.0-alpha-0001"
+  },
+  "devDependencies": {
+    "browserify": "^16.1.1",
+    "coalesce-vue": "file:../coalesce-vue",
+    "css-loader": "^0.28.9",
+    "node-sass": "^4.7.2",
+    "poi": "^9.6.13",
+    "post-compile-webpack-plugin": "^0.1.1",
+    "sass-loader": "^6.0.6",
+    "style-loader": "^0.20.1",
+    "ts-loader": "^3.3.1",
+    "tsify": "^3.0.4",
+    "typescript": "^2.8.0-dev.20180302",
+    "vue-class-component": "^6.1.2",
+    "vue-loader": "^13.7.0",
+    "vue-property-decorator": "^6.0.0",
+    "vue-style-loader": "^3.1.1",
+    "vue-template-compiler": "^2.5.13",
+    "vueify": "^9.4.1",
+    "webpack": "^3.10.0",
+    "webpack-node-externals": "^1.6.0"
+  },
+  "scripts": {
+    "build": "node ./build.js"
+  }
+}

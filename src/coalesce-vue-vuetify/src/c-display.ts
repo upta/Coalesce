@@ -1,9 +1,9 @@
 
-import { CreateElement } from 'vue';
+import { CreateElement, VNode } from 'vue';
 import { Vue, Component, Watch, Prop } from 'vue-property-decorator';
 
 import MetadataComponent from './c-metadata-component'
-import { propDisplay } from '../core'
+import { propDisplay } from 'coalesce-vue/lib/model'
 
 @Component({
 	name: 'c-display',
