@@ -1,22 +1,26 @@
-﻿using IntelliTect.Coalesce.TypeDefinition;
+﻿using IntelliTect.Coalesce.Models;
+using IntelliTect.Coalesce.TypeDefinition;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Security.Claims;
-using System.Threading;
+using System.Text;
 
 namespace IntelliTect.Coalesce
 {
     public class CrudContext
     {
+        public CrudContext()
+        { }
 
-        public CrudContext(ClaimsPrincipal user, CancellationToken cancellationToken)
+        public CrudContext(ClaimsPrincipal user)
         {
             User = user ?? throw new ArgumentNullException(nameof(user));
-            CancellationToken = cancellationToken;
         }
 
-        public CrudContext(ClaimsPrincipal user, TimeZoneInfo timeZone, CancellationToken cancellationToken)
-            : this(user, cancellationToken)
+        public CrudContext(ClaimsPrincipal user, TimeZoneInfo timeZone)
+            : this(user)
         {
             TimeZone = timeZone ?? throw new ArgumentNullException(nameof(timeZone));
         }
@@ -24,9 +28,7 @@ namespace IntelliTect.Coalesce
         /// <summary>
         /// The user making the request for a CRUD action.
         /// </summary>
-        public ClaimsPrincipal User { get; }
-
-        public CancellationToken CancellationToken { get; }
+        public ClaimsPrincipal User { get; set; } = null;
 
         /// <summary>
         /// The timezone to be used when performing any actions on date inputs that lack time zone information.
@@ -42,14 +44,14 @@ namespace IntelliTect.Coalesce
     public class CrudContext<TContext> : CrudContext
         where TContext : DbContext
     {
-        public CrudContext(TContext dbContext, ClaimsPrincipal user, CancellationToken cancellationToken)
-            : base(user, cancellationToken)
+        public CrudContext(TContext dbContext, ClaimsPrincipal user)
+            : base(user)
         {
             DbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         }
 
-        public CrudContext(TContext dbContext, ClaimsPrincipal user, TimeZoneInfo timeZone, CancellationToken cancellationToken)
-            : base(user, timeZone, cancellationToken)
+        public CrudContext(TContext dbContext, ClaimsPrincipal user, TimeZoneInfo timeZone)
+            : base(user, timeZone)
         {
             DbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         }
