@@ -40,7 +40,10 @@ namespace Coalesce.Web
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
             services.AddCoalesce(builder => builder
-                .AddContext<AppDbContext>()
+                .AddContext<AppDbContext>(opt =>
+                {
+                    opt.CancelQueryOnHttpAbort = true;
+                })
                 .UseDefaultDataSource(typeof(MyDataSource<,>))
                 .UseDefaultBehaviors(typeof(MyBehaviors<,>))
                 .UseTimeZone(TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time"))

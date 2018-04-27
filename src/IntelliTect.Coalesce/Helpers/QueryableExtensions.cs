@@ -46,12 +46,13 @@ namespace IntelliTect.Coalesce
         /// <typeparam name="T"></typeparam>
         /// <param name="query"></param>
         /// <param name="id"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns>The desired item, or null if it was not found.</returns>
-        public static Task<T> FindItemAsync<T>(this IQueryable<T> query, object id)
+        public static Task<T> FindItemAsync<T>(this IQueryable<T> query, object id, CancellationToken cancellationToken = default)
         {
 
             var classViewModel = ReflectionRepository.Global.GetClassViewModel<T>();
-            return query.Where($"{classViewModel.PrimaryKey.Name} == @0", id).FirstOrDefaultAsync();
+            return query.Where($"{classViewModel.PrimaryKey.Name} == @0", id).FirstOrDefaultAsync(cancellationToken);
         }
 
         /// <summary>

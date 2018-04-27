@@ -4,17 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
-using System.Security.Claims;
-using System.Text;
 using System.Threading.Tasks;
 using IntelliTect.Coalesce.TypeDefinition;
-using Microsoft.EntityFrameworkCore.Query.Internal;
-using IntelliTect.Coalesce.Mapping.IncludeTrees;
 using IntelliTect.Coalesce.Mapping;
 using IntelliTect.Coalesce.Api;
-using IntelliTect.Coalesce.Utilities;
 using System.Collections.ObjectModel;
-using IntelliTect.Coalesce.Api.DataSources;
+using System.Threading;
 
 namespace IntelliTect.Coalesce
 {
@@ -22,6 +17,8 @@ namespace IntelliTect.Coalesce
         where T : class, new()
         where TContext : DbContext
     {
+        protected CancellationToken CancellationToken => !Context.CrudStrategyOptions.CancelQueryOnHttpAbort ? CancellationToken.None : Context.CancellationTokenSource.Token;
+
         /// <summary>
         /// When ListParameters.Includes is this value, the default behavior of including
         /// all immediate relations of an object when making a request will be skipped.
@@ -557,7 +554,7 @@ namespace IntelliTect.Coalesce
         public virtual Task<int> GetListTotalCountAsync(IQueryable<T> query, IFilterParameters parameters)
         {
             var canUseAsync = CanEvalQueryAsynchronously(query);
-            return canUseAsync ? query.CountAsync() : Task.FromResult(query.Count());
+            return canUseAsync ? query.CountAsync(CancellationToken) : Task.FromResult(query.Count());
         }
 
 
@@ -580,7 +577,7 @@ namespace IntelliTect.Coalesce
             query = ApplyListPaging(query, parameters, totalCount, out int page, out int pageSize);
             
             var canUseAsync = CanEvalQueryAsynchronously(query);
-            List<T> result = canUseAsync ? await query.ToListAsync() : query.ToList();
+            List<T> result = canUseAsync ? await query.ToListAsync(CancellationToken) : query.ToList();
 
             var tree = GetIncludeTree(query, parameters);
             return (new ListResult<T>(result, page: page, totalCount: totalCount, pageSize: pageSize), tree);
@@ -617,7 +614,7 @@ namespace IntelliTect.Coalesce
             var query = GetQuery(parameters);
 
             var canUseAsync = CanEvalQueryAsynchronously(query);
-            T result = canUseAsync ? await query.FindItemAsync(id) : query.FindItem(id);
+            T result = canUseAsync ? await query.FindItemAsync(id, CancellationToken) : query.FindItem(id);
 
             if (result == null)
             {

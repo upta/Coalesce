@@ -1,15 +1,11 @@
 ﻿using IntelliTect.Coalesce.Api;
-using IntelliTect.Coalesce.Api.Behaviors;
 using IntelliTect.Coalesce.Helpers;
 using IntelliTect.Coalesce.Mapping;
 using IntelliTect.Coalesce.Models;
 using IntelliTect.Coalesce.TypeDefinition;
-using IntelliTect.Coalesce.Utilities;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace IntelliTect.Coalesce
@@ -18,6 +14,8 @@ namespace IntelliTect.Coalesce
         where T : class, new()
         where TContext : DbContext
     {
+
+        protected CancellationToken CancellationToken => !Context.CrudStrategyOptions.CancelSaveChangesOnHttpAbort ? CancellationToken.None : Context.CancellationTokenSource.Token;
 
         /// <summary>
         /// If set, this data source will be used in place of the supplied data source
@@ -151,7 +149,7 @@ namespace IntelliTect.Coalesce
                 throw new InvalidOperationException("Recieved null from result of BeforeSave. Expected an ItemResult.");
             if (!beforeSave.WasSuccessful) return new ItemResult<TDto>(beforeSave);
 
-            await Db.SaveChangesAsync();
+            await Db.SaveChangesAsync(CancellationToken);
 
             // Pull the object to get any changes.
             var newItemId = ClassViewModel.PrimaryKey.PropertyInfo.GetValue(item);
@@ -341,7 +339,7 @@ namespace IntelliTect.Coalesce
         public virtual Task ExecuteDeleteAsync(T item)
         {
             GetDbSet().Remove(item);
-            return Db.SaveChangesAsync();
+            return Db.SaveChangesAsync(CancellationToken);
         }
 
         /// <summary>

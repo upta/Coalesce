@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Linq.Dynamic.Core;
 using IntelliTect.Coalesce.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -48,7 +47,11 @@ namespace IntelliTect.Coalesce.Api.Controllers
 
             if (context.Exception != null && !context.ExceptionHandled)
             {
-                logger?.LogError(context.Exception, context.Exception.Message);
+                if (!(context.Exception is OperationCanceledException))
+                {
+                    logger?.LogError(context.Exception, context.Exception.Message);
+                }
+
                 context.ExceptionHandled = true;
                 response.StatusCode = (int)HttpStatusCode.InternalServerError;
 

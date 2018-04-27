@@ -4,11 +4,30 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 using System.Collections.Generic;
+using IntelliTect.Coalesce.Api;
+using Microsoft.AspNetCore.Http;
 
 namespace IntelliTect.Coalesce
 {
     public class CoalesceServiceBuilder
     {
+        /// <summary>
+        /// Configuration options for 
+        /// </summary>
+        public class CrudStrategyOptions
+        {
+
+            /// <summary>
+            /// A flag to tell the <see cref="StandardDataSource{T,TContext}"/> to use aborted HTTP requests to cancel in-flight async queries
+            /// </summary>
+            public bool CancelQueryOnHttpAbort { get; set; } = true;
+
+            /// <summary>
+            /// A flag to tell the <see cref="StandardBehaviors{T,TContext}"/> to use aborted HTTP requests to cancel EF <see cref="DbContext.SaveChanges()"/> calls
+            /// </summary>
+            public bool CancelSaveChangesOnHttpAbort { get; set; } = false;
+        }
+
         internal CoalesceServiceBuilder(IServiceCollection services)
         {
             Services = services;
@@ -16,20 +35,42 @@ namespace IntelliTect.Coalesce
 
         internal IServiceCollection Services { get; }
 
+
+        /// <summary>
+        /// Add services related to the given context to the service container.
+        /// This allows the given context to work with the standard data sources and behaviors.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to wiring up <see cref="HttpContext.RequestAborted"/> to cancel in-flight async queries
+        /// </remarks>
+        /// <typeparam name="TContext">The DbContext that Coalesce needs to be able to handle.</typeparam>
+        public CoalesceServiceBuilder AddContext<TContext>()
+            where TContext : DbContext
+        {
+            return AddContext<TContext>(options => { });
+        }
+
         /// <summary>
         /// Add services related to the given context to the service container.
         /// This allows the given context to work with the standard data sources and behaviors.
         /// </summary>
         /// <typeparam name="TContext">The DbContext that Coalesce needs to be able to handle.</typeparam>
-        public CoalesceServiceBuilder AddContext<TContext>()
+        /// <param name="coalesceContextOptionsAction">Options to change how the <see cref="StandardCrudStrategy{T,TContext}"/> behaves.</param>
+        public CoalesceServiceBuilder AddContext<TContext>(Action<CrudStrategyOptions> coalesceContextOptionsAction)
             where TContext : DbContext
         {
+            var options = new CrudStrategyOptions();
+            coalesceContextOptionsAction.Invoke(options);
+
             ReflectionRepository.Global.AddAssembly<TContext>();
-            Services.AddScoped(sp => new CrudContext<TContext>(
-                sp.GetRequiredService<TContext>(),
-                sp.GetRequiredService<Microsoft.AspNetCore.Http.IHttpContextAccessor>().HttpContext.User,
-                sp.GetService<ITimeZoneResolver>()?.GetTimeZoneInfo() ?? TimeZoneInfo.Local
-            ));
+            
+                Services.AddScoped(sp => new CrudContext<TContext>(
+                    sp.GetRequiredService<TContext>(),
+                    sp.GetRequiredService<IHttpContextAccessor>().HttpContext.User,
+                    sp.GetService<ITimeZoneResolver>()?.GetTimeZoneInfo() ?? TimeZoneInfo.Local,
+                    sp.GetRequiredService<IHttpContextAccessor>().HttpContext.RequestAborted
+                ){CrudStrategyOptions = options});
+           
 
             return this;
         }

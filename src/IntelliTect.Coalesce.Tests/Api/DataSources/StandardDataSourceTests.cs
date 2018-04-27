@@ -5,11 +5,13 @@ using IntelliTect.Coalesce.Tests.TargetClasses.TestDbContext;
 using IntelliTect.Coalesce.TypeDefinition;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Security.Claims;
-using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using IntelliTect.Coalesce.Models;
 using Xunit;
 
 namespace IntelliTect.Coalesce.Tests.Api.DataSources
@@ -18,7 +20,7 @@ namespace IntelliTect.Coalesce.Tests.Api.DataSources
     {
         public StandardDataSource<Case, TestDbContext> CaseSource { get; }
 
-        public StandardDataSourceTests() : base()
+        public StandardDataSourceTests()
         {
             CaseSource = Source<Case>();
         }
@@ -26,7 +28,7 @@ namespace IntelliTect.Coalesce.Tests.Api.DataSources
         private StandardDataSource<T, TestDbContext> Source<T>()
             where T : class, new()
             => new StandardDataSource<T, TestDbContext>(CrudContext);
-        
+
         [Theory]
         [InlineData("none")]
         [InlineData("NONE")]
@@ -46,15 +48,15 @@ namespace IntelliTect.Coalesce.Tests.Api.DataSources
             var tree = query.GetIncludeTree();
             Assert.NotNull(tree[nameof(Case.AssignedTo)]);
             Assert.NotNull(tree[nameof(Case.ReportedBy)]);
-            Assert.NotNull(tree[nameof(Case.CaseProducts)][nameof(CaseProduct.Product)]); 
+            Assert.NotNull(tree[nameof(Case.CaseProducts)][nameof(CaseProduct.Product)]);
         }
-        
+
 
         private (PropertyViewModel, IQueryable<TModel>) PropertyFiltersTestHelper<TModel, TProp>(
             Expression<Func<TModel, TProp>> propSelector,
             TProp propValue,
             string filterValue
-        ) 
+        )
             where TModel : class, new()
         {
             var filterParams = new FilterParameters();
@@ -66,7 +68,7 @@ namespace IntelliTect.Coalesce.Tests.Api.DataSources
             filterParams.Filter[propInfo.JsonName] = filterValue;
             Db.Set<TModel>().Add(model);
             Db.SaveChanges();
-            
+
             var query = source.ApplyListPropertyFilters(Db.Set<TModel>(), filterParams);
 
             return (propInfo, query);
@@ -133,8 +135,8 @@ namespace IntelliTect.Coalesce.Tests.Api.DataSources
 
             Assert.Empty(query);
         }
-        
-        
+
+
         public static IEnumerable<object[]> Filter_MatchesDateTimesData = new[]
         {
             new object[] { true, "2017-08-02", new DateTime(2017, 08, 02, 0, 0, 0) },
@@ -322,5 +324,69 @@ namespace IntelliTect.Coalesce.Tests.Api.DataSources
             // Since this search term doesn't match the property's value, the results should be empty.
             Assert.Empty(query);
         }
+
+
+        [Fact]
+        [Description("Test for https://github.com/IntelliTect/Coalesce/issues/59")]
+        public async Task GetListAsync_WhenCancelQueryOnHttpAbortTrue_TokenIsCancelled()
+        {
+            var token = new CancellationToken(true);
+            var source = new AsyncDataSource(
+                new CrudContext<TestDbContext>(Db, new ClaimsPrincipal(), token)
+                {
+                    CrudStrategyOptions = new CoalesceServiceBuilder.CrudStrategyOptions
+                    {
+                        CancelQueryOnHttpAbort = true,
+                        CancelSaveChangesOnHttpAbort = false
+                    }
+                });
+
+            (ListResult<Case> List, IncludeTree IncludeTree) result =
+                await source.GetListAsync(new ListParameters());
+            Assert.Empty(result.List.List);
+            Assert.True(source.ExposedToken.IsCancellationRequested);
+        }
+
+        [Fact]
+        [Description("Test for https://github.com/IntelliTect/Coalesce/issues/59")]
+        public async Task GetListAsync_WhenCancelQueryOnHttpAbortFalse_TokenIsNotCancelled()
+        {
+            var token = new CancellationToken(true); 
+            var source = new AsyncDataSource(
+                new CrudContext<TestDbContext>(Db, new ClaimsPrincipal(), token)
+                {
+                    CrudStrategyOptions = new CoalesceServiceBuilder.CrudStrategyOptions
+                    {
+                        CancelQueryOnHttpAbort = false,
+                        CancelSaveChangesOnHttpAbort = false
+                    }
+                });
+
+            (ListResult<Case> List, IncludeTree IncludeTree) result =
+                await source.GetListAsync(new ListParameters());
+            Assert.Empty(result.List.List);
+            Assert.False(source.ExposedToken.IsCancellationRequested);
+        }
+
+        private class AsyncDataSource : StandardDataSource<Case, TestDbContext>
+        {
+            public AsyncDataSource(CrudContext<TestDbContext> context) : base(context)
+            {
+            }
+
+            public CancellationToken ExposedToken => CancellationToken;
+
+
+            protected override bool CanEvalQueryAsynchronously(IQueryable<Case> query)
+            {
+                return true;
+            }
+        }
     }
+
+
+
+
+
+
 }
