@@ -23,6 +23,9 @@
     "lodash-es": "^4.17.10",
     "qs": "^6.5.1"
   },
+  "optionalDependencies": {
+    "vuex": "^3.0.1"
+  },
   "peerDependencies": {
     "vue": "~2.5.16"
   },
@@ -33,7 +36,8 @@
     "lodash": "^4.17.10",
     "ts-jest": "^22.4.6",
     "typescript": "2.9.2",
-    "vue": "^2.5.16"
+    "vue": "^2.5.16",
+    "vuex": "^3.0.1"
   },
   "scripts": {
     "build": "tsc -p ./tsconfig.build.json",

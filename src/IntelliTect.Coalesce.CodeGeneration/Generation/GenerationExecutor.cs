@@ -119,20 +119,14 @@ namespace IntelliTect.Coalesce.CodeGeneration.Generation
 
         }
 
-        private async Task LoadProjects(ServiceProvider provider, ILogger<GenerationExecutor> logger, GenerationContext genContext)
+        private Task LoadProjects(ServiceProvider provider, ILogger<GenerationExecutor> logger, GenerationContext genContext)
         {
             const int maxProjectLoadRetries = 10;
             const int projectLoadRetryDelayMs = 1000;
 
-            await Task.WhenAll(
-                Task.Run(async () =>
-                {
-                    genContext.WebProject = await TryLoadProject(Config.WebProject);
-                }),
-                Task.Run(async () =>
-                {
-                    genContext.DataProject = await TryLoadProject(Config.DataProject);
-                })
+            return Task.WhenAll(
+                Task.Run(async () => genContext.WebProject = await TryLoadProject(Config.WebProject)),
+                Task.Run(async () => genContext.DataProject = await TryLoadProject(Config.DataProject))
             );
 
             async Task<ProjectContext> TryLoadProject(ProjectConfiguration config)
