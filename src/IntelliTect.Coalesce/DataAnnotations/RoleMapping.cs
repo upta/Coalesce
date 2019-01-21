@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace IntelliTect.Coalesce.DataAnnotations
 {
+    [Obsolete]
     public static class RoleMapping
     {
         // TODO: This should probably be made read only.
