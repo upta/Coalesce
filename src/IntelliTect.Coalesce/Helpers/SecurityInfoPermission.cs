@@ -1,6 +1,4 @@
 ﻿using IntelliTect.Coalesce.DataAnnotations;
-using IntelliTect.Coalesce.Utilities;
-using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +21,7 @@ namespace IntelliTect.Coalesce.Helpers
             Name = name;
         }
 
-        public bool HasAttribute { get; } = false;
+        public bool HasAttribute { get; }
         public SecurityPermissionLevels PermissionLevel { get; } = SecurityPermissionLevels.AllowAuthorized;
         public string Roles { get; } = "";
         public string Name { get; } = "";
@@ -33,7 +31,7 @@ namespace IntelliTect.Coalesce.Helpers
         public bool NoAccess => PermissionLevel == SecurityPermissionLevels.DenyAll;
         public bool HasRoles => RoleList.Any();
 
-        private IReadOnlyList<string> _roleList = null;
+        private IReadOnlyList<string> _roleList;
 
         public IReadOnlyList<string> RoleList
         {
@@ -44,7 +42,7 @@ namespace IntelliTect.Coalesce.Helpers
                 var list = new List<string>();
                 if (!string.IsNullOrEmpty(Roles))
                 {
-                    var roles = Roles.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                    string[] roles = Roles.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
                     list.AddRange(roles.SelectMany(RoleMapping.Map).Union(roles).Distinct());
                 }
                 return _roleList = list.AsReadOnly();
@@ -57,13 +55,20 @@ namespace IntelliTect.Coalesce.Helpers
 
         public override string ToString()
         {
-            if (HasAttribute)
+            if (!HasAttribute)
             {
-                if (PermissionLevel == SecurityPermissionLevels.AllowAll) return $"Allow All ";
-                else if (PermissionLevel == SecurityPermissionLevels.DenyAll) return $"Deny All ";
-                else return $"Allow Authorized Roles: {ExternalRoleList} ";
+                return "Allow All Authorized";
             }
-            return $"Allow All Authorized";
+
+            switch (PermissionLevel)
+            {
+                case SecurityPermissionLevels.AllowAll:
+                    return "Allow All ";
+                case SecurityPermissionLevels.DenyAll:
+                    return "Deny All ";
+                default:
+                    return $"Allow Authorized Roles: {ExternalRoleList} ";
+            }
         }
     }
 }
