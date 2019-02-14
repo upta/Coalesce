@@ -23,6 +23,8 @@ namespace Coalesce.Web.Models
         public int? ReportedById { get; set; }
         public Coalesce.Web.Models.PersonDtoGen ReportedBy { get; set; }
         public string ImageName { get; set; }
+        public long? ImageSize { get; set; }
+        public string ImageHash { get; set; }
         public string AttachmentName { get; set; }
         public string Severity { get; set; }
         public Coalesce.Domain.Case.Statuses? Status { get; set; }
@@ -48,6 +50,8 @@ namespace Coalesce.Web.Models
             this.AssignedToId = obj.AssignedToId;
             this.ReportedById = obj.ReportedById;
             this.ImageName = obj.ImageName;
+            this.ImageSize = obj.ImageSize;
+            this.ImageHash = obj.ImageHash;
             this.AttachmentName = obj.AttachmentName;
             this.Severity = obj.Severity;
             this.Status = obj.Status;
@@ -94,6 +98,8 @@ namespace Coalesce.Web.Models
             entity.OpenedAt = (OpenedAt ?? entity.OpenedAt);
             entity.AssignedToId = AssignedToId;
             entity.ReportedById = ReportedById;
+            entity.ImageSize = (ImageSize ?? entity.ImageSize);
+            entity.ImageHash = ImageHash;
             entity.AttachmentName = AttachmentName;
             entity.Severity = Severity;
             entity.Status = (Status ?? entity.Status);
