@@ -37,14 +37,18 @@ namespace Coalesce.Web.Api
             int id,
             DataSourceParameters parameters,
             [DeclaredFor(typeof(Coalesce.Domain.CaseDto))] IDataSource<Coalesce.Domain.Case> dataSource)
-            => GetImplementation(id, parameters, dataSource);
+        {
+            return GetImplementation(id, parameters, dataSource);
+        }
 
         [HttpGet("list")]
         [Authorize]
         public virtual Task<ListResult<Coalesce.Domain.CaseDto>> List(
             ListParameters parameters,
             [DeclaredFor(typeof(Coalesce.Domain.CaseDto))] IDataSource<Coalesce.Domain.Case> dataSource)
-            => ListImplementation(parameters, dataSource);
+        {
+            return ListImplementation(parameters, dataSource);
+        }
 
         [HttpGet("count")]
         [Authorize]

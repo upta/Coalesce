@@ -75,16 +75,28 @@ namespace IntelliTect.Coalesce.CodeGeneration.Api.Generators
                 b.Indented($"{primaryKeyParameter},");
                 b.Indented($"DataSourceParameters parameters,");
                 b.Indented($"{dataSourceParameter})");
-                b.Indented($"=> GetImplementation(id, parameters, dataSource);");
+                b.Line("{");
+                    if (Model.HasFile)
+                    {
+                        b.Indented($"dataSource.SelectPropertiesFunction = SelectSmartPropertiesFunction();");
+                    }
+                    b.Indented($"return GetImplementation(id, parameters, dataSource);");
+                b.Line("}");
 
-                // ENDPOINT: /list
-                b.Line();
+            // ENDPOINT: /list
+            b.Line();
                 b.Line("[HttpGet(\"list\")]");
                 b.Line($"{securityInfo.ReadAnnotation}");
                 b.Line($"{Model.ApiActionAccessModifier} virtual Task<ListResult<{Model.DtoName}>> List(");
                 b.Indented($"ListParameters parameters,");
                 b.Indented($"{dataSourceParameter})");
-                b.Indented($"=> ListImplementation(parameters, dataSource);");
+                b.Line("{");
+                if (Model.HasFile)
+                {
+                    b.Indented($"dataSource.SelectPropertiesFunction = SelectSmartPropertiesFunction();");
+                }
+                b.Indented($"return ListImplementation(parameters, dataSource); ");
+                b.Line("}");
 
                 // ENDPOINT: /count
                 b.Line();
@@ -231,21 +243,21 @@ namespace IntelliTect.Coalesce.CodeGeneration.Api.Generators
                         b.Line("file.CopyTo(stream);");
 
                         b.Line($"itemResult.Object.{fileProperty.Name} = stream.ToArray();");
-                        if (!string.IsNullOrWhiteSpace(fileProperty.FileFilenameProperty) && !Model.PropertyByName(fileProperty.FileFilenameProperty).IsReadOnly)
+                        if (fileProperty.HasFileFilenameProperty && !fileProperty.FileFilenameProperty.IsReadOnly)
                         {
-                            b.Line($"itemResult.Object.{fileProperty.FileFilenameProperty} = file.FileName;");
+                            b.Line($"itemResult.Object.{fileProperty.FileFilenameProperty.Name} = file.FileName;");
                         }
-                        if (!string.IsNullOrWhiteSpace(fileProperty.FileHashProperty) && !Model.PropertyByName(fileProperty.FileHashProperty).IsReadOnly)
+                        if (fileProperty.HasFileHashProperty && !fileProperty.FileHashProperty.IsReadOnly)
                         {
                             b.Line("using (var sha256Hash = System.Security.Cryptography.SHA256.Create())");
                             b.Line("{");
                             b.Line($"    var hash = sha256Hash.ComputeHash(itemResult.Object.{fileProperty.Name});");
-                            b.Line($"    itemResult.Object.{fileProperty.FileHashProperty} = Convert.ToBase64String(hash);");
+                            b.Line($"    itemResult.Object.{fileProperty.FileHashProperty.Name} = Convert.ToBase64String(hash);");
                             b.Line("}");
                         }
-                        if (!string.IsNullOrWhiteSpace(fileProperty.FileSizeProperty) && !Model.PropertyByName(fileProperty.FileSizeProperty).IsReadOnly)
+                        if (fileProperty.HasFileSizeProperty && !fileProperty.FileSizeProperty.IsReadOnly)
                         {
-                            b.Line($"itemResult.Object.{fileProperty.FileSizeProperty} = file.Length;");
+                            b.Line($"itemResult.Object.{fileProperty.FileSizeProperty.Name} = file.Length;");
                         }
                         b.Line("await Db.SaveChangesAsync();");
                     }
@@ -260,10 +272,25 @@ namespace IntelliTect.Coalesce.CodeGeneration.Api.Generators
                 b.Line($"[HttpGet(\"{fileProperty.FileControllerMethodName}\")]");
                 using (b.Block($"{Model.ApiActionAccessModifier} virtual async Task<IActionResult> {fileProperty.FileControllerMethodName} (int id, {dataSourceParameter})"))
                 {
-                    b.Line("var (itemResult, _) = await dataSource.GetItemAsync(id, new ListParameters());");
+                    // Set up selector for loading only the part of the object we need from the database.
+                    b.Line($"dataSource.SelectPropertiesFunction = (query) => {{");
+                    b.Line($"    return query.Select(f =>");
+                    b.Line($"    new {Model.BaseViewModel.FullyQualifiedName}");
+                    b.Line($"    {{");
+                    var assignments = new List<string>();
+                    assignments.Add($"{Model.PrimaryKey.Name} = f.{Model.PrimaryKey.Name}");
+                    assignments.Add($"{fileProperty.Name} = f.{fileProperty.Name}");
+                    if (fileProperty.HasFileHashProperty) assignments.Add($"{fileProperty.FileHashProperty.Name} = f.{fileProperty.FileHashProperty.Name}");
+                    //if (fileProperty.HasFileMimeType) assignments.Add($"{fileProperty.FileMimeType.Name} = f.{fileProperty.FileMimeType.Name}");
+                    var assignmentsText = string.Join(",\n        ", assignments);
+                    b.Line($"        {assignmentsText}");
+                    b.Line($"    }});");
+                    b.Line($"}};");
+
+                    b.Line($"var (itemResult, _) = await dataSource.GetItemAsync(id, new ListParameters());");
                     b.Line($"if (itemResult.Object?.{fileProperty.Name} == null) return NotFound();");
                     b.Line($"string contentType = \"{fileProperty.FileMimeType}\";");
-                    if (string.IsNullOrWhiteSpace(fileProperty.FileMimeType))
+                    if (fileProperty.HasFileMimeType)
                     {
                         b.Line($"if (!(new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider().TryGetContentType(itemResult.Object.ImageName, out contentType))) contentType = \"application/octet-stream\";");
                     }
@@ -273,8 +300,31 @@ namespace IntelliTect.Coalesce.CodeGeneration.Api.Generators
                     }
                     else
                     {
-                        b.Line($"return File(itemResult.Object.{fileProperty.Name}, contentType, itemResult.Object.{fileProperty.FileFilenameProperty});");
+                        b.Line($"return File(itemResult.Object.{fileProperty.Name}, contentType, itemResult.Object.{fileProperty.FileFilenameProperty.Name});");
                     }
+                }
+            }
+            // Create a property selector that doesn't select the files for performance.
+            if (Model.HasFile)
+            {
+                b.DocComment($"Selector for not loading large properties");
+                // TODO: Figure out security
+                using (b.Block($"protected virtual SelectPropertiesFunction<{Model.FullyQualifiedName}> SelectSmartPropertiesFunction()"))
+                {
+                    var assignments = new List<string>();
+                    foreach (var prop in Model.LoadedProperties)
+                    {
+                        assignments.Add($"{prop.Name} = f.{prop.Name}");
+                    }
+                    var assignmentsText = string.Join(",\n        ", assignments);
+                  // Set up selector for loading only the part of the object we need from the database.
+                    b.Line($"return (query) => {{");
+                    b.Line($"    return query.Select(f =>");
+                    b.Line($"    new {Model.BaseViewModel.FullyQualifiedName}");
+                    b.Line($"    {{");
+                    b.Line($"        {assignmentsText}");
+                    b.Line($"    }});");
+                    b.Line($"}};");
                 }
 
             }

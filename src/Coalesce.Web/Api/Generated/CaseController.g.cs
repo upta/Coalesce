@@ -37,14 +37,20 @@ namespace Coalesce.Web.Api
             int id,
             DataSourceParameters parameters,
             IDataSource<Coalesce.Domain.Case> dataSource)
-            => GetImplementation(id, parameters, dataSource);
+        {
+            dataSource.SelectPropertiesFunction = SelectSmartPropertiesFunction();
+            return GetImplementation(id, parameters, dataSource);
+        }
 
         [HttpGet("list")]
         [AllowAnonymous]
         public virtual Task<ListResult<CaseDtoGen>> List(
             ListParameters parameters,
             IDataSource<Coalesce.Domain.Case> dataSource)
-            => ListImplementation(parameters, dataSource);
+        {
+            dataSource.SelectPropertiesFunction = SelectSmartPropertiesFunction();
+            return ListImplementation(parameters, dataSource);
+        }
 
         [HttpGet("count")]
         [AllowAnonymous]
@@ -202,9 +208,20 @@ namespace Coalesce.Web.Api
         [HttpGet("Image")]
         public virtual async Task<IActionResult> Image(int id, IDataSource<Coalesce.Domain.Case> dataSource)
         {
+            dataSource.SelectPropertiesFunction = (query) =>
+            {
+                return query.Select(f =>
+                new Coalesce.Domain.Case
+                {
+                    CaseKey = f.CaseKey,
+                    Image = f.Image,
+                    ImageHash = f.ImageHash
+                });
+            };
             var (itemResult, _) = await dataSource.GetItemAsync(id, new ListParameters());
             if (itemResult.Object?.Image == null) return NotFound();
             string contentType = "image/*";
+            if (!(new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider().TryGetContentType(itemResult.Object.ImageName, out contentType))) contentType = "application/octet-stream";
             return File(itemResult.Object.Image, contentType, itemResult.Object.ImageName);
         }
 
@@ -234,9 +251,18 @@ namespace Coalesce.Web.Api
         [HttpGet("Attachment")]
         public virtual async Task<IActionResult> Attachment(int id, IDataSource<Coalesce.Domain.Case> dataSource)
         {
+            dataSource.SelectPropertiesFunction = (query) =>
+            {
+                return query.Select(f =>
+                new Coalesce.Domain.Case
+                {
+                    CaseKey = f.CaseKey,
+                    Attachment = f.Attachment
+                });
+            };
             var (itemResult, _) = await dataSource.GetItemAsync(id, new ListParameters());
             if (itemResult.Object?.Attachment == null) return NotFound();
-            string contentType = "";
+            string contentType = "application/octet-stream";
             if (!(new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider().TryGetContentType(itemResult.Object.ImageName, out contentType))) contentType = "application/octet-stream";
             return File(itemResult.Object.Attachment, contentType, itemResult.Object.AttachmentName);
         }
@@ -266,10 +292,50 @@ namespace Coalesce.Web.Api
         [HttpGet("PlainAttachment")]
         public virtual async Task<IActionResult> PlainAttachment(int id, IDataSource<Coalesce.Domain.Case> dataSource)
         {
+            dataSource.SelectPropertiesFunction = (query) =>
+            {
+                return query.Select(f =>
+                new Coalesce.Domain.Case
+                {
+                    CaseKey = f.CaseKey,
+                    PlainAttachment = f.PlainAttachment
+                });
+            };
             var (itemResult, _) = await dataSource.GetItemAsync(id, new ListParameters());
             if (itemResult.Object?.PlainAttachment == null) return NotFound();
-            string contentType = "application/octet-stream";
+            string contentType = "text/plain";
+            if (!(new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider().TryGetContentType(itemResult.Object.ImageName, out contentType))) contentType = "application/octet-stream";
             return File(itemResult.Object.PlainAttachment, contentType);
+        }
+
+        /// <summary>
+        /// Selector for not loading large properties
+        /// </summary>
+        protected virtual SelectPropertiesFunction<Coalesce.Domain.Case> SelectSmartPropertiesFunction()
+        {
+            return (query) =>
+            {
+                return query.Select(f =>
+                new Coalesce.Domain.Case
+                {
+                    CaseKey = f.CaseKey,
+                    Title = f.Title,
+                    Description = f.Description,
+                    OpenedAt = f.OpenedAt,
+                    AssignedToId = f.AssignedToId,
+                    AssignedTo = f.AssignedTo,
+                    ReportedById = f.ReportedById,
+                    ReportedBy = f.ReportedBy,
+                    ImageSize = f.ImageSize,
+                    ImageHash = f.ImageHash,
+                    AttachmentName = f.AttachmentName,
+                    Severity = f.Severity,
+                    Status = f.Status,
+                    CaseProducts = f.CaseProducts,
+                    DevTeamAssignedId = f.DevTeamAssignedId,
+                    Duration = f.Duration
+                });
+            };
         }
     }
 }

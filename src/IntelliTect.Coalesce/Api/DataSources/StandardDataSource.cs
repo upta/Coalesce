@@ -44,6 +44,11 @@ namespace IntelliTect.Coalesce
         /// </summary>
         public int MaxPageSize { get; set; } = 10_000;
 
+        /// <summary>
+        /// List of properties to select from the database. Allows for setting these at runtime.
+        /// </summary>
+        public SelectPropertiesFunction<T> SelectPropertiesFunction { get; set; }
+
         public StandardDataSource(CrudContext<TContext> context) : base(context)
         {
         }
@@ -382,6 +387,19 @@ namespace IntelliTect.Coalesce
         }
 
 
+        /// <summary>
+        /// Allows for selecting a subset of fields at the database level. Note that all fields selected
+        /// must be nullable or support a default value. The result will be the original 
+        /// object type. 
+        /// </summary>
+        /// <param name="query">The query to select from.</param>
+        /// <param name="parameters">The parameters.</param>
+        /// <returns>The new query with additional filtering applied.</returns>
+        public virtual IQueryable<T> ApplySelectPropertiesFunction(IQueryable<T> query, IDataSourceParameters parameters)
+        {
+            if (SelectPropertiesFunction != null) return SelectPropertiesFunction(query);
+            return query;
+        }
 
 
         /// <summary>
@@ -611,12 +629,15 @@ namespace IntelliTect.Coalesce
 
             query = ApplyListFiltering(query, parameters);
 
+
             // Get a count
             int totalCount = await GetListTotalCountAsync(query, parameters);
 
             // Add paging, sorting only after we've gotten the total count, since they don't affect counts.
             query = ApplyListSorting(query, parameters);
             query = ApplyListPaging(query, parameters, totalCount, out int page, out int pageSize);
+
+            query = ApplySelectPropertiesFunction(query, parameters);
             
             var canUseAsync = CanEvalQueryAsynchronously(query);
             List<T> result = canUseAsync ? await query.ToListAsync() : query.ToList();
@@ -659,6 +680,7 @@ namespace IntelliTect.Coalesce
         public virtual async Task<(ItemResult<T> Item, IncludeTree IncludeTree)> GetItemAsync(object id, IDataSourceParameters parameters)
         {
             var query = GetQuery(parameters);
+            query = ApplySelectPropertiesFunction(query, parameters);
 
             var canUseAsync = CanEvalQueryAsynchronously(query);
             T result = canUseAsync ? await query.FindItemAsync(id) : query.FindItem(id);

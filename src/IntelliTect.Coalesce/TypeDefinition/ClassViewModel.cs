@@ -179,6 +179,12 @@ namespace IntelliTect.Coalesce.TypeDefinition
         /// </summary>
         public IEnumerable<PropertyViewModel> FileProperties => Properties.Where(p => p.IsFile);
 
+        /// <summary>
+        /// Properties not marked as smartload.
+        /// </summary>
+        public IEnumerable<PropertyViewModel> LoadedProperties => Properties.Where(p => p.IsExplicitlyLoaded);      
+
+
         public IEnumerable<PropertyViewModel> DataSourceParameters => Properties
             .Where(p =>
                 !p.IsInternalUse && p.HasSetter && p.HasAttribute<CoalesceAttribute>()
@@ -421,6 +427,11 @@ namespace IntelliTect.Coalesce.TypeDefinition
         public ExecuteSecurityInfo ExecuteSecurity => new ExecuteSecurityInfo(this.GetSecurityPermission<ExecuteAttribute>());
 
         public bool IsDefaultDataSource => HasAttribute<DefaultDataSourceAttribute>();
+
+        /// <summary>
+        /// Returns true if any of the properties as marked as a file.
+        /// </summary>
+        public bool HasFile => this.Properties.Any(f => f.IsFile);
 
         public object GetAttributeValue<TAttribute>(string valueName) where TAttribute : Attribute =>
             Type.GetAttributeValue<TAttribute>(valueName);

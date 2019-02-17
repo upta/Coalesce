@@ -37,14 +37,18 @@ namespace Coalesce.Web.Api
             int id,
             DataSourceParameters parameters,
             IDataSource<Coalesce.Domain.Company> dataSource)
-            => GetImplementation(id, parameters, dataSource);
+        {
+            return GetImplementation(id, parameters, dataSource);
+        }
 
         [HttpGet("list")]
         [Authorize]
         public virtual Task<ListResult<CompanyDtoGen>> List(
             ListParameters parameters,
             IDataSource<Coalesce.Domain.Company> dataSource)
-            => ListImplementation(parameters, dataSource);
+        {
+            return ListImplementation(parameters, dataSource);
+        }
 
         [HttpGet("count")]
         [Authorize]
