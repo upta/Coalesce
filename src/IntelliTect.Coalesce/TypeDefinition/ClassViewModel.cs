@@ -266,6 +266,10 @@ namespace IntelliTect.Coalesce.TypeDefinition
 
         #region Searching/Sorting
 
+        /// <summary>
+        /// Returns an expression suitable for usage with LINQ Dynamic
+        /// that represents the default sort ordering of instances of the class.
+        /// </summary>
         public string DefaultOrderByClause(string prependText = "")
         {
             var defaultOrderBy = DefaultOrderBy.ToList();
@@ -277,11 +281,11 @@ namespace IntelliTect.Coalesce.TypeDefinition
             {
                 if (orderInfo.OrderByDirection == DefaultOrderByAttribute.OrderByDirections.Ascending)
                 {
-                    orderByClauseList.Add($"{prependText}{orderInfo.FieldName} ASC");
+                    orderByClauseList.Add($"{orderInfo.OrderExpression(prependText)} ASC");
                 }
                 else
                 {
-                    orderByClauseList.Add($"{prependText}{orderInfo.FieldName} DESC");
+                    orderByClauseList.Add($"{orderInfo.OrderExpression(prependText)} DESC");
                 }
             }
 
@@ -291,7 +295,7 @@ namespace IntelliTect.Coalesce.TypeDefinition
         /// <summary>
         /// Gets a sorted list of the default order by attributes for the class.
         /// </summary>
-        public IEnumerable<OrderByInformation> DefaultOrderBy
+        public ICollection<OrderByInformation> DefaultOrderBy
         {
             get
             {
@@ -305,30 +309,32 @@ namespace IntelliTect.Coalesce.TypeDefinition
                     }
                 }
 
-                // Nothing found, order by ListText and then ID.
-                if (result.Count == 0)
+                if (result.Count > 0)
                 {
-                    var nameProp = PropertyByName("Name");
-                    if (nameProp?.HasNotMapped == false && nameProp.IsClientProperty)
-                    {
-                        result.Add(new OrderByInformation()
-                        {
-                            FieldName = "Name",
-                            OrderByDirection = DefaultOrderByAttribute.OrderByDirections.Ascending,
-                            FieldOrder = 1
-                        });
-                    }
-                    else if (PrimaryKey != null)
-                    {
-                        result.Add(new OrderByInformation()
-                        {
-                            FieldName = PrimaryKey.Name,
-                            OrderByDirection = DefaultOrderByAttribute.OrderByDirections.Ascending,
-                            FieldOrder = 1
-                        });
-                    }
+                    return result.OrderBy(f => f.FieldOrder).ToList();
                 }
-                return result.OrderBy(f => f.FieldOrder);
+
+                // Nothing found, order by ListText and then ID.
+                var nameProp = PropertyByName("Name");
+                if (nameProp?.HasNotMapped == false && nameProp.IsClientProperty)
+                {
+                    result.Add(new OrderByInformation()
+                    {
+                        FieldName = "Name",
+                        OrderByDirection = DefaultOrderByAttribute.OrderByDirections.Ascending,
+                        FieldOrder = 1
+                    });
+                }
+                else if (PrimaryKey != null)
+                {
+                    result.Add(new OrderByInformation()
+                    {
+                        FieldName = PrimaryKey.Name,
+                        OrderByDirection = DefaultOrderByAttribute.OrderByDirections.Ascending,
+                        FieldOrder = 1
+                    });
+                }
+                return result;
             }
         }
 
