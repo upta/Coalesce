@@ -12,4 +12,4 @@ variables:
 jobs:
 - template: common.yml
 
-#webhook was broken, it said
+#turn it on explicitly in dev ops
