@@ -1,5 +1,5 @@
 # Coalesce  
-pr testing2
+
 [Home](http://coalesce.intellitect.com/) &middot; [Documentation](http://coalesce.readthedocs.io) &middot; [Get Started](#Get-Started) &middot; [Builds](#Builds)
 
 Coalesce is a framework for rapid-development of ASP.NET Core web applications. It works from the Entity Framework Core data model that you design, automating the creation of the glue - DTOs, API Controllers, and TypeScript - that sit between your data and the UI of your application. 
