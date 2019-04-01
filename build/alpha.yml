@@ -8,9 +8,8 @@ variables:
   BuildTag: alpha
   CoalesceVueDir: src/coalesce-vue
   VersionSuffix: -alpha.$(Build.BuildNumber)
-  NotAComment: true
 
 jobs:
 - template: common.yml
 
-#turn it on explicitly in dev ops
+#maybe it's wired up now?
